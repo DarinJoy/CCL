@@ -5,8 +5,15 @@ from io import BytesIO
 
 app = Flask(__name__)
 
-# Encryption/Decryption key (for demo purposes, generate a new key each time)
-key = Fernet.generate_key()
+# Load or generate encryption key
+try:
+    with open('secret.key', 'rb') as key_file:
+        key = key_file.read()
+except FileNotFoundError:
+    key = Fernet.generate_key()
+    with open('secret.key', 'wb') as key_file:
+        key_file.write(key)
+
 cipher_suite = Fernet(key)
 
 # Function to encrypt file data
@@ -27,19 +34,19 @@ def home():
 # Route to process file encryption or decryption
 @app.route('/process', methods=['POST'])
 def process_file():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file provided'}), 400
-    
-    file = request.files['file']
-    action = request.form.get('action')
-    
-    if not file.filename:
-        return jsonify({'error': 'No file selected'}), 400
-    
-    # Read file data into memory
-    file_data = file.read()
-    
     try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        action = request.form.get('action')
+        
+        if not file.filename:
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # Read file data into memory
+        file_data = file.read()
+        
         if action == 'encrypt':
             processed_data = encrypt_data(file_data)
             filename = f"encrypted_{file.filename}"
@@ -61,7 +68,11 @@ def process_file():
         )
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error(f"Error processing file: {str(e)}")
+        return jsonify({'error': 'An error occurred while processing the file'}), 500
+
+# This is needed for Vercel
+app = app.wsgi_app
 
 if __name__ == '__main__':
     app.run(debug=True)
