@@ -427,21 +427,45 @@
         const action = document.getElementById("actionSelect").value;
         const status = document.getElementById("status");
 
+        if (!fileInput.files[0]) {
+          status.textContent = "Please select a file";
+          return;
+        }
+
         const formData = new FormData();
         formData.append("file", fileInput.files[0]);
         formData.append("action", action);
+
+        status.textContent = "Processing...";
 
         fetch("/process", {
           method: "POST",
           body: formData,
         })
-          .then((response) => response.json())
-          .then((data) => {
-            status.textContent = data.message;
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.blob();
+          })
+          .then((blob) => {
+            // Create a download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download =
+              action === "encrypt"
+                ? `encrypted_${fileInput.files[0].name}`
+                : `decrypted_${fileInput.files[0].name}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            status.textContent = "File processed successfully!";
           })
           .catch((error) => {
             console.error("Error:", error);
-            status.textContent = "An error occurred.";
+            status.textContent = "An error occurred while processing the file.";
           });
       }
     </script>
