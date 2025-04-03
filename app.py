@@ -39,7 +39,7 @@ def decrypt_file(file_path):
 # Route for home page
 @app.route('/')
 def home():
-    return send_from_directory('static', 'index.html')
+    return send_from_directory('.', 'index.html')
 
 # Route to process file encryption or decryption
 @app.route('/process', methods=['POST'])
